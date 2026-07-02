@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sisterhood of Blades</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#120e1a;
+    --panel:#1c1526;
+    --panel-light:#2a1f38;
+    --gold:#e0b25c;
+    --ember:#e3743a;
+    --parchment:#d8c7a1;
+    --hp:#c23a3a;
+    --mana:#3a7fc2;
+    --xp:#7fc23a;
+    --common:#9aa0a8;
+    --rare:#4fa3e0;
+    --epic:#b35fe0;
+    --pixel-border: 4px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg);
+    color:var(--parchment);
+    font-family:'VT323', monospace; font-size:20px;
+    display:flex; align-items:center; justify-content:center;
+    background-image:
+      radial-gradient(circle at 20% 20%, #241a33 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, #2a1520 0%, transparent 40%);
+    image-rendering:pixelated;
+  }
+  h1,h2,h3,.pixel-font{ font-family:'Press Start 2P', monospace; }
+  .hidden{ display:none !important; }
+  .frame{
+    background:var(--panel);
+    border:var(--pixel-border) solid #000;
+    box-shadow:
+      0 0 0 4px var(--gold),
+      0 0 0 8px #000,
+      0 8px 30px rgba(0,0,0,.6);
+    padding:28px;
+  }
+  button{
+    font-family:'Press Start 2P', monospace;
+    font-size:12px;
+    background:var(--ember);
+    color:#1a0f08;
+    border:3px solid #000;
+    box-shadow:0 0 0 2px var(--gold);
+    padding:10px 14px;
+    cursor:pointer;
+    transition:transform .05s;
+  }
+  button:hover{ filter:brightness(1.15); }
+  button:active{ transform:translateY(2px); }
+  button:disabled{ opacity:.4; cursor:not-allowed; }
+  input{
+    font-family:'VT323', monospace; font-size:20px;
+    background:#0e0a14; color:var(--parchment);
+    border:2px solid var(--gold); padding:8px; width:100%;
+  }
+  label{ font-size:14px; color:var(--gold); display:block; margin:10px 0 4px; }
+  .error-text{ color:#ff6b6b; font-size:14px; min-height:20px; margin-top:8px; }
+  .center-col{ display:flex; flex-direction:column; align-items:center; gap:14px; }
+
+  /* ---------- LOGIN ---------- */
+  #screen-login .frame{ width:340px; }
+  #screen-login h1{ font-size:16px; color:var(--gold); text-align:center; line-height:1.6; }
+  .tab-row{ display:flex; gap:8px; width:100%; }
+  .tab-row button{ flex:1; background:var(--panel-light); color:var(--parchment); }
+  .tab-row button.active{ background:var(--ember); color:#1a0f08; }
+
+  /* ---------- CHAR SELECT ---------- */
+  #screen-charselect .frame{ width:820px; max-width:92vw; }
+  .class-grid{ display:flex; gap:18px; flex-wrap:wrap; justify-content:center; margin-top:16px;}
+  .class-card{
+    background:var(--panel-light); border:3px solid #000; box-shadow:0 0 0 2px #000;
+    width:220px; padding:14px; cursor:pointer; text-align:center;
+  }
+  .class-card.selected{ box-shadow:0 0 0 3px var(--gold); }
+  .class-card canvas{ image-rendering:pixelated; margin:8px auto; display:block; }
+  .class-card h3{ font-size:12px; color:var(--gold); }
+  .class-card p{ font-size:15px; color:var(--parchment); opacity:.85; line-height:1.4; }
+  .stat-row{ font-size:14px; display:flex; justify-content:space-between; margin:2px 0; color:#c9b98f;}
+
+  /* ---------- GAME ---------- */
+  #screen-game{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  #hud{
+    width:800px; max-width:96vw; display:flex; justify-content:space-between;
+    align-items:center; gap:16px; background:var(--panel); border:3px solid #000;
+    box-shadow:0 0 0 2px var(--gold); padding:10px 14px;
+  }
+  .barwrap{ width:220px; }
+  .barlabel{ font-size:12px; color:var(--gold); display:flex; justify-content:space-between;}
+  .bar{ height:14px; background:#000; border:2px solid #000; box-shadow:0 0 0 1px var(--gold); }
+  .bar-fill{ height:100%; transition:width .2s; }
+  #canvasWrap{ position:relative; }
+  canvas#game{ image-rendering:pixelated; background:#000; border:4px solid #000; box-shadow:0 0 0 4px var(--gold); }
+  #toast{
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    font-family:'Press Start 2P'; font-size:11px; color:var(--gold);
+    background:rgba(0,0,0,.75); padding:6px 12px; border:2px solid var(--gold);
+    pointer-events:none; opacity:0; transition:opacity .3s;
+  }
+  #floatlayer{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+  .floattext{ position:absolute; font-family:'Press Start 2P'; font-size:11px; pointer-events:none; }
+  #bottombar{ width:800px; max-width:96vw; display:flex; justify-content:space-between; }
+  #bottombar button{ font-size:11px; }
+
+  /* ---------- INVENTORY MODAL ---------- */
+  #inv-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.7);
+    display:flex; align-items:center; justify-content:center; z-index:20;
+  }
+  #inv-panel{ width:640px; max-width:92vw; max-height:86vh; overflow-y:auto; }
+  #inv-panel h2{ font-size:14px; color:var(--gold); text-align:center; }
+  .equip-row{ display:flex; gap:10px; justify-content:center; margin:12px 0 18px; }
+  .equip-slot{
+    width:90px; height:90px; background:var(--panel-light); border:2px solid #000;
+    box-shadow:0 0 0 1px var(--gold); display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-size:11px; text-align:center; cursor:pointer;
+    padding:4px;
+  }
+  .equip-slot .slotlabel{ font-size:9px; color:#a08a5a; font-family:'Press Start 2P'; margin-bottom:4px;}
+  #inv-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+  .item-cell{
+    background:var(--panel-light); border:2px solid #000; min-height:78px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:12px; text-align:center; cursor:pointer; padding:4px; position:relative;
+  }
+  .item-cell.rarity-common{ box-shadow:0 0 0 1px var(--common); }
+  .item-cell.rarity-selten{ box-shadow:0 0 0 1px var(--rare); }
+  .item-cell.rarity-episch{ box-shadow:0 0 0 1px var(--epic); }
+  .item-cell:hover{ filter:brightness(1.3); }
+  .close-x{ position:absolute; top:10px; right:14px; font-family:'Press Start 2P'; font-size:14px; cursor:pointer; color:var(--gold);}
+  .tip{ font-size:13px; color:#a08a5a; text-align:center; margin-top:10px;}
+
+  #screen-charselect input#charName{ margin-bottom:10px; }
+
+  #death-overlay{
+    position:fixed; inset:0; background:rgba(20,0,0,.85); display:flex;
+    align-items:center; justify-content:center; z-index:30;
+  }
+  #death-overlay .frame{ text-align:center; width:320px; }
+  #death-overlay h2{ color:#ff6b6b; font-size:16px; }
+
+  @media (max-width:850px){
+    #hud, #bottombar{ width:96vw; }
+    .barwrap{ width:150px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN SCREEN ============ -->
+<div id="screen-login">
+  <div class="frame center-col">
+    <h1>SISTERHOOD<br>OF BLADES</h1>
+    <div class="tab-row">
+      <button id="tab-login" class="active">Login</button>
+      <button id="tab-register">Neu erstellen</button>
+    </div>
+    <div style="width:100%">
+      <label>Name</label>
+      <input id="loginName" maxlength="16" placeholder="Heldenname" autocomplete="off">
+      <label>Passwort</label>
+      <input id="loginPass" type="password" maxlength="40" placeholder="Passwort">
+    </div>
+    <button id="btnAuth" style="width:100%; padding:14px;">Einloggen</button>
+    <div class="error-text" id="loginError"></div>
+  </div>
+</div>
+
+<!-- ============ CHARACTER CREATION ============ -->
+<div id="screen-charselect" class="hidden">
+  <div class="frame">
+    <h2 style="text-align:center; color:var(--gold); font-size:14px;">WÄHLE DEINE KLASSE</h2>
+    <div class="center-col">
+      <input id="charName" maxlength="14" placeholder="Name deiner Heldin">
+    </div>
+    <div class="class-grid" id="classGrid"></div>
+    <div class="center-col" style="margin-top:18px;">
+      <button id="btnCreateChar" style="padding:14px 22px;">Abenteuer beginnen</button>
+      <div class="error-text" id="charError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ GAME SCREEN ============ -->
+<div id="screen-game" class="hidden">
+  <div id="hud">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <canvas id="portrait" width="40" height="56" style="image-rendering:pixelated;"></canvas>
+      <div>
+        <div class="pixel-font" style="font-size:11px; color:var(--gold);" id="hudName">-</div>
+        <div class="pixel-font" style="font-size:10px;" id="hudLevel">Lvl 1</div>
+      </div>
+    </div>
+    <div>
+      <div class="barwrap">
+        <div class="barlabel"><span>HP</span><span id="hpText">-</span></div>
+        <div class="bar"><div class="bar-fill" id="hpBar" style="width:100%; background:var(--hp);"></div></div>
+      </div>
+      <div class="barwrap">
+        <div class="barlabel"><span id="manaLabel">Mana</span><span id="manaText">-</span></div>
+        <div class="bar"><div class="bar-fill" id="manaBar" style="width:100%; background:var(--mana);"></div></div>
+      </div>
+    </div>
+    <div>
+      <div class="barwrap" style="width:150px;">
+        <div class="barlabel"><span>XP</span><span id="xpText">-</span></div>
+        <div class="bar"><div class="bar-fill" id="xpBar" style="width:0%; background:var(--xp);"></div></div>
+      </div>
+      <div class="pixel-font" style="font-size:11px; color:var(--gold); margin-top:6px;">Gold: <span id="goldText">0</span></div>
+    </div>
+  </div>
+
+  <div id="canvasWrap">
+    <canvas id="game" width="800" height="480"></canvas>
+    <div id="toast"></div>
+    <div id="floatlayer"></div>
+  </div>
+
+  <div id="bottombar">
+    <div class="pixel-font" style="font-size:10px;" id="mapName">Wiesenland</div>
+    <div>
+      <button id="btnInventory">Inventar [I]</button>
+      <button id="btnSaveNow">Speichern</button>
+      <button id="btnLogout">Ausloggen</button>
+    </div>
+  </div>
+  <div class="tip">Bewegen: WASD/Pfeile · Angriff: Leertaste oder Klick · Inventar: I</div>
+</div>
+
+<!-- ============ INVENTORY OVERLAY ============ -->
+<div id="inv-overlay" class="hidden">
+  <div class="frame" id="inv-panel">
+    <span class="close-x" id="invClose">✕</span>
+    <h2>AUSRÜSTUNG & INVENTAR</h2>
+    <div class="equip-row">
+      <div class="equip-slot" id="slot-main"><div class="slotlabel">HAUPTHAND</div><div class="slotcontent">leer</div></div>
+      <div class="equip-slot" id="slot-offhand"><div class="slotlabel">NEBENHAND</div><div class="slotcontent">leer</div></div>
+      <div class="equip-slot" id="slot-armor"><div class="slotlabel">RÜSTUNG</div><div class="slotcontent">leer</div></div>
+    </div>
+    <div id="inv-grid"></div>
+    <div class="tip">Klicke ein Item zum Ausrüsten/Ablegen. Ausrüstung anklicken zum Abziehen.</div>
+  </div>
+</div>
+
+<!-- ============ DEATH OVERLAY ============ -->
+<div id="death-overlay" class="hidden">
+  <div class="frame">
+    <h2>Du bist gefallen...</h2>
+    <p>Deine Heldin erwacht am Lagerfeuer und verliert etwas Gold.</p>
+    <button id="btnRespawn">Weiterkämpfen</button>
+  </div>
+</div>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+<script>
+/* =========================================================================
+   FIREBASE SETUP
+   Wichtig: Es wird KEINE Firebase Authentication genutzt (Name+Passwort ist
+   selbstgebaut, Passwort wird per SHA-256 gehasht in der Realtime Database
+   gespeichert). Damit das Schreiben/Lesen funktioniert, müssen die
+   Datenbank-Regeln offen sein (Testmodus: ".read": true, ".write": true).
+   Das ist NICHT für ein produktives / sicherheitskritisches Projekt geeignet,
+   für ein privates Spiel unter Freunden aber ok.
+   ========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyDUMMY-REPLACE-IF-NEEDED",
+  databaseURL: "https://magic-faith-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "magic-faith"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+async function sha256(text){
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function sanitizeKey(name){
+  return name.trim().toLowerCase().replace(/[^a-z0-9_\-]/g,'_').slice(0,24);
+}
+
+/* =========================================================================
+   PIXEL SPRITE ENGINE — kleine handgemalte Pixel-Raster, kein Bild-Download
+   ========================================================================= */
+// Basis-Humanoid-Raster (10 breit x 14 hoch). 0=leer,1=Haar,2=Haut,3=Outfit,4=Outfit dunkel,5=Auge
+const HUMANOID_A = [
+"0111111100",
+"0111111100",
+"0122222100",
+"0125252100",
+"0122222100",
+"0033333300",
+"0333333330",
+"3333333333",
+"0333333330",
+"0322222330",
+"0033333300",
+"0034443300",
+"0034443300",
+"0044004400"];
+const HUMANOID_B = [
+"0111111100",
+"0111111100",
+"0122222100",
+"0125252100",
+"0122222100",
+"0033333300",
+"0333333330",
+"3333333333",
+"0333333330",
+"0322222330",
+"0033333300",
+"0043344300",
+"0043344300",
+"0400004400"];
+
+function drawPixelGrid(ctx, grid, palette, ox, oy, px){
+  for(let r=0;r<grid.length;r++){
+    const row = grid[r];
+    for(let c=0;c<row.length;c++){
+      const ch = row[c];
+      if(ch === '0') continue;
+      ctx.fillStyle = palette[ch] || '#f0f';
+      ctx.fillRect(ox + c*px, oy + r*px, px, px);
+    }
+  }
+}
+
+const CLASS_PALETTES = {
+  krieger:  {'1':'#5a3a22','2':'#e8b98a','5':'#241608','3':'#8a2f2f','4':'#5c1c1c'},
+  magier:   {'1':'#2d2050','2':'#e8b98a','5':'#241608','3':'#3a5aa8','4':'#233d75'},
+  waldlaeufer:{'1':'#2f5a2a','2':'#e8b98a','5':'#241608','3':'#3f6b34','4':'#274822'}
+};
+
+// Kleine Gegner-Raster (8x8)
+const ENEMY_GRIDS = {
+  slime:[
+    "00111100",
+    "01222210",
+    "12222221",
+    "12232231",
+    "12222221",
+    "01222210",
+    "00111100",
+    "00000000"],
+  wolf:[
+    "01000010",
+    "11000011",
+    "11111111",
+    "12222221",
+    "12252221",
+    "11111111",
+    "01111110",
+    "01100110"],
+  skelett:[
+    "00111100",
+    "01222210",
+    "01252210",
+    "00111100",
+    "01111110",
+    "11011011",
+    "01111110",
+    "01100110"],
+  fledermaus:[
+    "10000001",
+    "11000011",
+    "11100111",
+    "11111111",
+    "01222210",
+    "01252210",
+    "00111100",
+    "00000000"],
+  oger:[
+    "0111111100",
+    "0122222100",
+    "0125252100",
+    "0122222100",
+    "0033333300",
+    "3333333333",
+    "3333333333",
+    "0333333330",
+    "0034443300",
+    "0044004400"]
+};
+const ENEMY_PALETTES = {
+  slime:{'1':'#1f5c1f','2':'#4fbf4f','3':'#245c24'},
+  wolf:{'1':'#3a3a3a','2':'#787878','5':'#e0e04a'},
+  skelett:{'1':'#dedede','2':'#f2f2e8','5':'#c23a3a'},
+  fledermaus:{'1':'#2a1030','2':'#4a2050','5':'#e0e04a'},
+  oger:{'1':'#274a1a','2':'#5c8a3a','5':'#e04a4a','3':'#6b4423','4':'#4a2f18'}
+};
+
+function makeSprite(grid, palette, scale){
+  const c = document.createElement('canvas');
+  c.width = grid[0].length*scale; c.height = grid.length*scale;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  drawPixelGrid(ctx, grid, palette, 0, 0, scale);
+  return c;
+}
+
+/* =========================================================================
+   SPIELDATEN: Klassen, Waffen, Gegner, Karten
+   ========================================================================= */
+const CLASS_DATA = {
+  krieger: {
+    label:"Kriegerin", desc:"Robuste Nahkämpferin mit hoher Ausdauer.",
+    baseHp:120, baseMana:30, manaLabel:"Ausdauer", baseAtk:11, baseDef:8, speed:2.6,
+    attackType:"melee", range:46, cooldown:420, manaCost:0,
+    perLevel:{hp:14, mana:4, atk:2, def:2},
+    startWeapon:"kurzschwert", startArmor:"lederruestung"
+  },
+  magier: {
+    label:"Magierin", desc:"Zerbrechlich, aber verheerende Fernzauber.",
+    baseHp:70, baseMana:110, manaLabel:"Mana", baseAtk:16, baseDef:2, speed:2.4,
+    attackType:"ranged", range:340, cooldown:650, manaCost:12, projSpeed:6.2, projColor:"#7fd0ff",
+    perLevel:{hp:7, mana:14, atk:3, def:1},
+    startWeapon:"zauberstab", startArmor:"robe"
+  },
+  waldlaeufer: {
+    label:"Waldläuferin", desc:"Schnell und treffsicher mit dem Bogen.",
+    baseHp:90, baseMana:70, manaLabel:"Energie", baseAtk:13, baseDef:4, speed:3.2,
+    attackType:"ranged", range:300, cooldown:380, manaCost:8, projSpeed:8, projColor:"#c9e08a",
+    perLevel:{hp:10, mana:8, atk:2, def:1},
+    startWeapon:"kurzbogen", startArmor:"lederruestung"
+  }
+};
+
+// slot: main / offhand / armor  | hands: 1 oder 2 (nur bei Waffen)
+const ITEM_TEMPLATES = {
+  kurzschwert:{name:"Kurzschwert", slot:"main", hands:1, type:"weapon", atk:4, classes:["krieger"]},
+  dolch:{name:"Dolch", slot:"main", hands:1, type:"weapon", atk:3, classes:["krieger","waldlaeufer"]},
+  zweihaender:{name:"Zweihänder", slot:"main", hands:2, type:"weapon", atk:9, classes:["krieger"]},
+  rundschild:{name:"Rundschild", slot:"offhand", hands:1, type:"weapon", def:4, classes:["krieger"]},
+  zauberstab:{name:"Zauberstab", slot:"main", hands:1, type:"weapon", atk:4, classes:["magier"]},
+  kriegsstab:{name:"Kriegsstab", slot:"main", hands:2, type:"weapon", atk:10, classes:["magier"]},
+  kurzbogen:{name:"Kurzbogen", slot:"main", hands:2, type:"weapon", atk:6, classes:["waldlaeufer"]},
+  langbogen:{name:"Langbogen", slot:"main", hands:2, type:"weapon", atk:11, classes:["waldlaeufer"]},
+  lederruestung:{name:"Lederrüstung", slot:"armor", type:"armor", def:3, classes:["krieger","waldlaeufer"]},
+  kettenhemd:{name:"Kettenhemd", slot:"armor", type:"armor", def:7, classes:["krieger"]},
+  robe:{name:"Robe", slot:"armor", type:"armor", def:2, mana:15, classes:["magier"]},
+  platte:{name:"Plattenpanzer", slot:"armor", type:"armor", def:11, classes:["krieger"]},
+  waldumhang:{name:"Waldumhang", slot:"armor", type:"armor", def:4, classes:["waldlaeufer"]}
+};
+const RARITIES = [
+  {id:"common", label:"Gewöhnlich", mult:1.0, color:"#9aa0a8", chance:0.60},
+  {id:"selten", label:"Selten", mult:1.4, color:"#4fa3e0", chance:0.30},
+  {id:"episch", label:"Episch", mult:1.9, color:"#b35fe0", chance:0.10}
+];
+function rollRarity(){
+  const r = Math.random(); let acc=0;
+  for(const rr of RARITIES){ acc+=rr.chance; if(r<=acc) return rr; }
+  return RARITIES[0];
+}
+function instantiateItem(templateId, rarity){
+  const t = ITEM_TEMPLATES[templateId];
+  rarity = rarity || rollRarity();
+  const it = {
+    uid: templateId+'_'+Math.random().toString(36).slice(2,8),
+    templateId, name:t.name, slot:t.slot, type:t.type, hands:t.hands||1,
+    classes:t.classes, rarity:rarity.id, rarityColor:rarity.color,
+    atk: t.atk? Math.round(t.atk*rarity.mult):0,
+    def: t.def? Math.round(t.def*rarity.mult):0,
+    mana: t.mana? Math.round(t.mana*rarity.mult):0
+  };
+  return it;
+}
+
+const ENEMY_TYPES = {
+  slime:{hp:22, dmg:4, speed:1.0, xp:8, gold:[1,3], grid:"slime", scale:6, ranged:false, aggro:110},
+  wildschwein:{hp:34, dmg:6, speed:1.6, xp:12, gold:[2,4], grid:"slime", scale:6, ranged:false, aggro:130}, // reuses slime visuals recolored below
+  wolf:{hp:48, dmg:9, speed:2.0, xp:20, gold:[3,6], grid:"wolf", scale:6, ranged:false, aggro:170},
+  skelett:{hp:52, dmg:8, speed:1.2, xp:22, gold:[3,7], grid:"skelett", scale:6, ranged:true, aggro:220, projSpeed:4.5},
+  fledermaus:{hp:30, dmg:6, speed:2.6, xp:14, gold:[1,4], grid:"fledermaus", scale:6, ranged:false, aggro:150},
+  hoehlentroll:{hp:95, dmg:14, speed:1.1, xp:40, gold:[6,12], grid:"oger", scale:6, ranged:false, aggro:150},
+  hoehlenoger_boss:{hp:340, dmg:22, speed:0.9, xp:220, gold:[40,80], grid:"oger", scale:9, ranged:false, aggro:260, boss:true}
+};
+
+const MAPS = {
+  map1:{
+    name:"Wiesenland", width:1500, height:900, bg:"#2c4a1e", grid:"#33531f",
+    obstacles:[{x:300,y:200,w:80,h:80},{x:700,y:500,w:120,h:60},{x:1100,y:250,w:70,h:140}],
+    spawns:[{type:"slime",max:5},{type:"wildschwein",max:3}],
+    exit:{x:1460,y:400,w:40,h:200,to:"map2", spawnAt:{x:60,y:450}}
+  },
+  map2:{
+    name:"Dunkler Wald", width:1700, height:1000, bg:"#16241a", grid:"#1c2f20",
+    obstacles:[{x:400,y:300,w:60,h:200},{x:900,y:150,w:100,h:100},{x:1300,y:600,w:150,h:80},{x:200,y:700,w:90,h:90}],
+    spawns:[{type:"wolf",max:5},{type:"skelett",max:4},{type:"fledermaus",max:3}],
+    exit:{x:1660,y:450,w:40,h:200,to:"map3", spawnAt:{x:60,y:500}}
+  },
+  map3:{
+    name:"Höhle des Schreckens", width:1400, height:900, bg:"#221822", grid:"#2a1e2a",
+    obstacles:[{x:250,y:250,w:100,h:100},{x:700,y:400,w:140,h:100},{x:1000,y:150,w:80,h:200}],
+    spawns:[{type:"fledermaus",max:5},{type:"hoehlentroll",max:3}],
+    boss:{type:"hoehlenoger_boss", x:1200, y:450}
+  }
+};
+
+/* =========================================================================
+   GLOBALER STATE
+   ========================================================================= */
+let userKey=null, displayName=null;
+let player=null; // laufender Spielzustand
+let selectedClass="krieger";
+let keys={};
+let mouse={x:0,y:0,down:false};
+let entities=[]; // enemies + drops + projectiles
+let lastTime=0, spawnTimer=0, autosaveTimer=0;
+let facing={x:0,y:1};
+let attackCooldown=0;
+let invulnTimer=0;
+let running=false;
+let animTick=0;
+
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+/* ---------------- LOGIN LOGIC ---------------- */
+let mode = "login";
+document.getElementById('tab-login').onclick = ()=>{ mode="login"; document.getElementById('tab-login').classList.add('active'); document.getElementById('tab-register').classList.remove('active'); document.getElementById('btnAuth').textContent="Einloggen"; };
+document.getElementById('tab-register').onclick = ()=>{ mode="register"; document.getElementById('tab-register').classList.add('active'); document.getElementById('tab-login').classList.remove('active'); document.getElementById('btnAuth').textContent="Konto erstellen"; };
+
+document.getElementById('btnAuth').onclick = async ()=>{
+  const nameRaw = document.getElementById('loginName').value;
+  const pass = document.getElementById('loginPass').value;
+  const errEl = document.getElementById('loginError');
+  errEl.textContent="";
+  if(!nameRaw.trim() || !pass){ errEl.textContent="Bitte Name und Passwort eingeben."; return; }
+  const key = sanitizeKey(nameRaw);
+  if(key.length < 3){ errEl.textContent="Name muss mind. 3 Zeichen haben (a-z,0-9)."; return; }
+  const hash = await sha256(pass);
+  try{
+    const snap = await db.ref('players/'+key).get();
+    if(mode==="register"){
+      if(snap.exists()){ errEl.textContent="Diesen Namen gibt es schon. Bitte einloggen."; return; }
+      await db.ref('players/'+key).set({ displayName:nameRaw.trim(), passwordHash:hash, character:null });
+      userKey=key; displayName=nameRaw.trim();
+      goToCharSelect();
+    } else {
+      if(!snap.exists()){ errEl.textContent="Kein Konto mit diesem Namen gefunden."; return; }
+      const data = snap.val();
+      if(data.passwordHash !== hash){ errEl.textContent="Falsches Passwort."; return; }
+      userKey=key; displayName=data.displayName || nameRaw.trim();
+      if(data.character){
+        player = data.character;
+        startGame();
+      } else {
+        goToCharSelect();
+      }
+    }
+  }catch(e){
+    console.error(e);
+    errEl.textContent="Verbindung zur Datenbank fehlgeschlagen. Prüfe Firebase-Regeln/Config.";
+  }
+};
+
+/* ---------------- CHARACTER CREATION ---------------- */
+function goToCharSelect(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-charselect').classList.remove('hidden');
+  buildClassGrid();
+}
+function buildClassGrid(){
+  const grid = document.getElementById('classGrid');
+  grid.innerHTML="";
+  Object.keys(CLASS_DATA).forEach(cid=>{
+    const c = CLASS_DATA[cid];
+    const card = document.createElement('div');
+    card.className = 'class-card' + (cid===selectedClass ? ' selected':'');
+    card.onclick = ()=>{ selectedClass=cid; buildClassGrid(); };
+    const cv = document.createElement('canvas');
+    cv.width=60; cv.height=84;
+    card.appendChild(cv);
+    const h = document.createElement('h3'); h.textContent = c.label.toUpperCase();
+    const p = document.createElement('p'); p.textContent = c.desc;
+    const s1=document.createElement('div'); s1.className='stat-row'; s1.innerHTML=`<span>HP</span><span>${c.baseHp}</span>`;
+    const s2=document.createElement('div'); s2.className='stat-row'; s2.innerHTML=`<span>${c.manaLabel}</span><span>${c.baseMana}</span>`;
+    const s3=document.createElement('div'); s3.className='stat-row'; s3.innerHTML=`<span>Angriff</span><span>${c.baseAtk}</span>`;
+    card.appendChild(h); card.appendChild(p); card.appendChild(s1); card.appendChild(s2); card.appendChild(s3);
+    grid.appendChild(card);
+    const cctx = cv.getContext('2d'); cctx.imageSmoothingEnabled=false;
+    drawPixelGrid(cctx, HUMANOID_A, CLASS_PALETTES[cid], 5, 3, 6);
+  });
+}
+document.getElementById('btnCreateChar').onclick = async ()=>{
+  const nameEl = document.getElementById('charName');
+  const errEl = document.getElementById('charError');
+  const heroName = nameEl.value.trim() || "Namenlose Heldin";
+  const c = CLASS_DATA[selectedClass];
+  player = {
+    name: heroName, class:selectedClass, level:1, xp:0,
+    hp:c.baseHp, maxHp:c.baseHp, mana:c.baseMana, maxMana:c.baseMana,
+    atk:c.baseAtk, def:c.baseDef, gold:20,
+    mapId:"map1", x:100, y:400,
+    inventory:[],
+    equipment:{ main: instantiateItem(c.startWeapon, RARITIES[0]), offhand:null, armor: instantiateItem(c.startArmor, RARITIES[0]) }
+  };
+  try{
+    await db.ref('players/'+userKey+'/character').set(player);
+  }catch(e){ console.error(e); errEl.textContent="Konnte nicht speichern, spiele trotzdem lokal weiter."; }
+  startGame();
+};
+
+/* ---------------- SAVE / LOAD ---------------- */
+async function saveGame(){
+  if(!userKey || !player) return;
+  try{ await db.ref('players/'+userKey+'/character').set(player); }
+  catch(e){ console.warn("Speichern fehlgeschlagen", e); }
+}
+
+/* ---------------- GAME START ---------------- */
+function startGame(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-charselect').classList.add('hidden');
+  document.getElementById('screen-game').classList.remove('hidden');
+  document.getElementById('manaLabel').textContent = CLASS_DATA[player.class].manaLabel;
+  entities=[];
+  loadMap(player.mapId, {x:player.x, y:player.y});
+  updatePortrait();
+  updateHUD();
+  running=true;
+  requestAnimationFrame(loop);
+}
+
+function updatePortrait(){
+  const p = document.getElementById('portrait');
+  const pctx = p.getContext('2d'); pctx.imageSmoothingEnabled=false;
+  pctx.clearRect(0,0,p.width,p.height);
+  drawPixelGrid(pctx, HUMANOID_A, CLASS_PALETTES[player.class], 0,0,4);
+}
+
+/* ---------------- MAP HANDLING ---------------- */
+let currentMap=null;
+function loadMap(mapId, spawnPos){
+  currentMap = MAPS[mapId];
+  player.mapId = mapId;
+  player.x = spawnPos.x; player.y = spawnPos.y;
+  entities = entities.filter(e=>e.type==='__never__'); // clear all
+  document.getElementById('mapName').textContent = currentMap.name;
+  spawnTimer = 0;
+  spawnWave(true);
+  if(currentMap.boss){
+    spawnEnemy(currentMap.boss.type, currentMap.boss.x, currentMap.boss.y);
+  }
+}
+function randomOpenSpot(){
+  for(let i=0;i<40;i++){
+    const x = 40+Math.random()*(currentMap.width-80);
+    const y = 40+Math.random()*(currentMap.height-80);
+    if(!collidesObstacle(x,y,20,20)) return {x,y};
+  }
+  return {x:60,y:60};
+}
+function collidesObstacle(x,y,w,h){
+  for(const o of currentMap.obstacles){
+    if(x < o.x+o.w && x+w > o.x && y < o.y+o.h && y+h > o.y) return true;
+  }
+  return false;
+}
+function spawnWave(initial){
+  for(const s of currentMap.spawns){
+    const alive = entities.filter(e=>e.kind==='enemy' && e.enemyType===s.type).length;
+    const toSpawn = initial ? s.max : Math.max(0, s.max-alive);
+    for(let i=0;i<toSpawn;i++){
+      const pos = randomOpenSpot();
+      spawnEnemy(s.type, pos.x, pos.y);
+    }
+  }
+}
+function spawnEnemy(type, x, y){
+  const def = ENEMY_TYPES[type];
+  entities.push({
+    kind:'enemy', enemyType:type, x, y, hp:def.hp, maxHp:def.hp,
+    facing:1, hitFlash:0, atkCd:0, id:Math.random().toString(36).slice(2)
+  });
+}
+
+/* ---------------- INPUT ---------------- */
+window.addEventListener('keydown', e=>{
+  keys[e.key.toLowerCase()]=true;
+  if(e.key===' '){ e.preventDefault(); tryAttack(); }
+  if(e.key.toLowerCase()==='i'){ toggleInventory(); }
+});
+window.addEventListener('keyup', e=>{ keys[e.key.toLowerCase()]=false; });
+canvas.addEventListener('mousedown', e=>{
+  const r = canvas.getBoundingClientRect();
+  mouse.x = e.clientX-r.left; mouse.y = e.clientY-r.top;
+  mouse.down=true;
+  const dx = (mouse.x)-(player.x-camX()), dy=(mouse.y)-(player.y-camY());
+  const len = Math.hypot(dx,dy)||1; facing={x:dx/len,y:dy/len};
+  tryAttack();
+});
+window.addEventListener('mouseup', ()=>mouse.down=false);
+
+/* ---------------- COMBAT ---------------- */
+function tryAttack(){
+  if(attackCooldown>0 || !running) return;
+  const c = CLASS_DATA[player.class];
+  if(c.attackType==='ranged'){
+    if(player.mana < c.manaCost) { showToast("Nicht genug " + c.manaLabel + "!"); return; }
+    player.mana -= c.manaCost;
+    entities.push({
+      kind:'proj', x:player.x, y:player.y, vx:facing.x*c.projSpeed, vy:facing.y*c.projSpeed,
+      dmg: getTotalAtk(), color:c.projColor, life:90, fromPlayer:true
+    });
+  } else {
+    const range = c.range;
+    for(const en of entities){
+      if(en.kind!=='enemy') continue;
+      const dx=en.x-player.x, dy=en.y-player.y;
+      const dist=Math.hypot(dx,dy);
+      if(dist<range){
+        const dot = (dx*facing.x+dy*facing.y)/(dist||1);
+        if(dot>0.2 || dist<26){
+          damageEnemy(en, getTotalAtk());
+        }
+      }
+    }
+  }
+  attackCooldown = c.cooldown;
+  animTick=8;
+}
+function getTotalAtk(){
+  let a = player.atk;
+  if(player.equipment.main) a += player.equipment.main.atk||0;
+  if(player.equipment.offhand) a += player.equipment.offhand.atk||0;
+  return a;
+}
+function getTotalDef(){
+  let d = player.def;
+  if(player.equipment.main) d += player.equipment.main.def||0;
+  if(player.equipment.offhand) d += player.equipment.offhand.def||0;
+  if(player.equipment.armor) d += player.equipment.armor.def||0;
+  return d;
+}
+function damageEnemy(en, dmg){
+  en.hp -= dmg; en.hitFlash=8;
+  spawnFloatText(en.x, en.y-20, "-"+dmg, "#fff");
+  if(en.hp<=0){
+    killEnemy(en);
+  }
+}
+function killEnemy(en){
+  entities = entities.filter(e=>e!==en);
+  const def = ENEMY_TYPES[en.enemyType];
+  gainXP(def.xp);
+  const gold = def.gold[0]+Math.floor(Math.random()*(def.gold[1]-def.gold[0]+1));
+  player.gold += gold;
+  spawnFloatText(en.x, en.y-10, "+"+gold+"g", "#e0b25c");
+  if(def.boss){ showToast("Der Höhlenoger wurde besiegt! Du bist eine Legende."); }
+  // Loot chance
+  if(Math.random()<0.35){
+    const pool = Object.keys(ITEM_TEMPLATES).filter(k=>ITEM_TEMPLATES[k].classes.includes(player.class) || Math.random()<0.15);
+    const pick = pool[Math.floor(Math.random()*pool.length)];
+    if(pick){
+      entities.push({kind:'drop', x:en.x, y:en.y, item:instantiateItem(pick), id:Math.random().toString(36).slice(2)});
+    }
+  }
+}
+function gainXP(amount){
+  player.xp += amount;
+  const need = xpToNext(player.level);
+  if(player.xp>=need){
+    player.xp -= need;
+    levelUp();
+  }
+  updateHUD();
+}
+function xpToNext(level){ return Math.floor(40*Math.pow(level,1.55)); }
+function levelUp(){
+  const c = CLASS_DATA[player.class];
+  player.level++;
+  player.maxHp += c.perLevel.hp; player.maxMana += c.perLevel.mana;
+  player.atk += c.perLevel.atk; player.def += c.perLevel.def;
+  player.hp = player.maxHp; player.mana = player.maxMana;
+  showToast("Stufenaufstieg! Level " + player.level);
+  saveGame();
+}
+
+/* ---------------- FLOATING TEXT / TOAST ---------------- */
+function spawnFloatText(wx, wy, text, color){
+  const layer = document.getElementById('floatlayer');
+  const el = document.createElement('div');
+  el.className='floattext'; el.textContent=text; el.style.color=color;
+  el.style.left = (wx-camX())+'px'; el.style.top=(wy-camY())+'px';
+  layer.appendChild(el);
+  let t=0;
+  const iv = setInterval(()=>{
+    t+=1; el.style.top=(wy-camY()-t*0.6)+'px'; el.style.opacity=(1-t/40);
+    if(t>40){ clearInterval(iv); el.remove(); }
+  },16);
+}
+let toastTimer=null;
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.opacity=1;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.opacity=0; }, 2200);
+}
+
+/* ---------------- CAMERA ---------------- */
+function camX(){ return Math.max(0, Math.min(currentMap.width-canvas.width, player.x-canvas.width/2)); }
+function camY(){ return Math.max(0, Math.min(currentMap.height-canvas.height, player.y-canvas.height/2)); }
+
+/* ---------------- MAIN LOOP ---------------- */
+function loop(t){
+  if(!running) return;
+  const dt = Math.min(40, t-lastTime||16); lastTime=t;
+  update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+function update(dt){
+  if(invulnTimer>0) invulnTimer-=dt;
+  if(attackCooldown>0) attackCooldown-=dt;
+  if(animTick>0) animTick--;
+
+  // movement
+  const c = CLASS_DATA[player.class];
+  let dx=0, dy=0;
+  if(keys['w']||keys['arrowup']) dy-=1;
+  if(keys['s']||keys['arrowdown']) dy+=1;
+  if(keys['a']||keys['arrowleft']) dx-=1;
+  if(keys['d']||keys['arrowright']) dx+=1;
+  if(dx||dy){
+    const len=Math.hypot(dx,dy); dx/=len; dy/=len;
+    facing={x:dx,y:dy};
+    const nx = player.x+dx*c.speed*(dt/16), ny=player.y+dy*c.speed*(dt/16);
+    if(!collidesObstacle(nx-12,player.y-12,24,24) && nx>10 && nx<currentMap.width-10) player.x=nx;
+    if(!collidesObstacle(player.x-12,ny-12,24,24) && ny>10 && ny<currentMap.height-10) player.y=ny;
+    animTick = (animTick>0)?animTick:1;
+  }
+  // mana/energy regen
+  player.mana = Math.min(player.maxMana, player.mana + 0.01*dt);
+
+  // map exit
+  if(currentMap.exit){
+    const ex = currentMap.exit;
+    if(player.x>ex.x && player.x<ex.x+ex.w && player.y>ex.y && player.y<ex.y+ex.h){
+      loadMap(ex.to, ex.spawnAt);
+      updateHUD();
+      return;
+    }
+  }
+
+  // enemies
+  for(const en of entities){
+    if(en.kind!=='enemy') continue;
+    if(en.hitFlash>0) en.hitFlash--;
+    const def = ENEMY_TYPES[en.enemyType];
+    const dx2=player.x-en.x, dy2=player.y-en.y, dist=Math.hypot(dx2,dy2);
+    if(dist<def.aggro){
+      const spd = def.speed*(dt/16);
+      if(dist>4){
+        const nx=en.x+(dx2/dist)*spd, ny=en.y+(dy2/dist)*spd;
+        if(!collidesObstacle(nx-10,en.y-10,20,20)) en.x=nx;
+        if(!collidesObstacle(en.x-10,ny-10,20,20)) en.y=ny;
+      }
+      en.facing = dx2<0?-1:1;
+      if(en.atkCd>0) en.atkCd-=dt;
+      if(def.ranged){
+        if(dist<def.aggro && en.atkCd<=0){
+          entities.push({kind:'proj', x:en.x,y:en.y, vx:(dx2/dist)*def.projSpeed, vy:(dy2/dist)*def.projSpeed, dmg:def.dmg, color:"#c23a3a", life:110, fromPlayer:false});
+          en.atkCd = 1400;
+        }
+      } else if(dist<30 && en.atkCd<=0){
+        hitPlayer(def.dmg);
+        en.atkCd = 900;
+      }
+    }
+  }
+
+  // projectiles
+  for(const p of entities){
+    if(p.kind!=='proj') continue;
+    p.x+=p.vx*(dt/16); p.y+=p.vy*(dt/16); p.life--;
+    if(collidesObstacle(p.x-4,p.y-4,8,8)) p.life=0;
+    if(p.fromPlayer){
+      for(const en of entities){
+        if(en.kind!=='enemy') continue;
+        if(Math.hypot(en.x-p.x, en.y-p.y)<22){ damageEnemy(en, p.dmg); p.life=0; break; }
+      }
+    } else {
+      if(Math.hypot(player.x-p.x, player.y-p.y)<20){ hitPlayer(p.dmg); p.life=0; }
+    }
+  }
+  entities = entities.filter(e=> e.kind!=='proj' || e.life>0);
+
+  // pickups
+  for(const d of entities){
+    if(d.kind!=='drop') continue;
+    if(Math.hypot(player.x-d.x, player.y-d.y)<26){
+      if(player.inventory.length<20){
+        player.inventory.push(d.item);
+        showToast(d.item.name + " erhalten!");
+        entities = entities.filter(e=>e!==d);
+      } else {
+        showToast("Inventar voll!");
+      }
+    }
+  }
+
+  // respawn waves slowly
+  spawnTimer += dt;
+  if(spawnTimer>6000){ spawnTimer=0; spawnWave(false); }
+
+  // autosave
+  autosaveTimer += dt;
+  if(autosaveTimer>15000){ autosaveTimer=0; saveGame(); }
+
+  updateHUD();
+}
+function hitPlayer(dmg){
+  if(invulnTimer>0) return;
+  const reduced = Math.max(1, dmg - Math.floor(getTotalDef()*0.5));
+  player.hp -= reduced;
+  invulnTimer = 500;
+  spawnFloatText(player.x, player.y-20, "-"+reduced, "#ff6b6b");
+  if(player.hp<=0){ playerDeath(); }
+}
+function playerDeath(){
+  running=false;
+  document.getElementById('death-overlay').classList.remove('hidden');
+  player.gold = Math.floor(player.gold*0.8);
+}
+document.getElementById('btnRespawn').onclick = ()=>{
+  player.hp = player.maxHp; player.mana=player.maxMana;
+  loadMap("map1", {x:100,y:400});
+  document.getElementById('death-overlay').classList.add('hidden');
+  running=true; lastTime=performance.now();
+  requestAnimationFrame(loop);
+};
+
+/* ---------------- RENDER ---------------- */
+function render(){
+  const cx=camX(), cy=camY();
+  ctx.fillStyle = currentMap.bg;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  // simple ground texture dots
+  ctx.fillStyle = currentMap.grid;
+  const startX = Math.floor(cx/40)*40;
+  const startY = Math.floor(cy/40)*40;
+  for(let gx=startX; gx<cx+canvas.width; gx+=40){
+    for(let gy=startY; gy<cy+canvas.height; gy+=40){
+      if(((gx/40+gy/40)%2)===0) ctx.fillRect(gx-cx, gy-cy, 40,40);
+    }
+  }
+  // obstacles
+  ctx.fillStyle="#000";
+  for(const o of currentMap.obstacles){
+    ctx.fillStyle="#3a2a1a";
+    ctx.fillRect(o.x-cx,o.y-cy,o.w,o.h);
+    ctx.fillStyle="#22160c";
+    ctx.fillRect(o.x-cx,o.y-cy,o.w,6);
+  }
+  // exit marker
+  if(currentMap.exit){
+    const ex=currentMap.exit;
+    ctx.fillStyle="rgba(224,178,92,0.35)";
+    ctx.fillRect(ex.x-cx, ex.y-cy, ex.w, ex.h);
+  }
+  // drops
+  for(const d of entities){
+    if(d.kind!=='drop') continue;
+    ctx.fillStyle = d.item.rarityColor;
+    ctx.fillRect(d.x-cx-8, d.y-cy-8, 16,16);
+    ctx.strokeStyle="#000"; ctx.strokeRect(d.x-cx-8, d.y-cy-8, 16,16);
+  }
+  // enemies
+  for(const en of entities){
+    if(en.kind!=='enemy') continue;
+    const grid = ENEMY_GRIDS[ENEMY_TYPES[en.enemyType].grid];
+    const scale = ENEMY_TYPES[en.enemyType].scale;
+    const pal = Object.assign({}, ENEMY_PALETTES[ENEMY_TYPES[en.enemyType].grid]);
+    ctx.save();
+    if(en.hitFlash>0){ ctx.globalAlpha=0.6; ctx.fillStyle="#fff"; }
+    const w = grid[0].length*scale, h = grid.length*scale;
+    ctx.translate(en.x-cx-w/2, en.y-cy-h/2);
+    if(en.facing<0){ ctx.translate(w,0); ctx.scale(-1,1); }
+    drawPixelGrid(ctx, grid, pal, 0,0, scale);
+    ctx.restore();
+    // hp bar
+    const maxHp = ENEMY_TYPES[en.enemyType].hp;
+    ctx.fillStyle="#000"; ctx.fillRect(en.x-cx-16, en.y-cy-h/2-10, 32,5);
+    ctx.fillStyle="#c23a3a"; ctx.fillRect(en.x-cx-16, en.y-cy-h/2-10, 32*Math.max(0,en.hp/maxHp),5);
+  }
+  // projectiles
+  for(const p of entities){
+    if(p.kind!=='proj') continue;
+    ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x-cx,p.y-cy,5,0,Math.PI*2); ctx.fill();
+  }
+  // player
+  const grid = (animTick>0 && Math.floor(animTick/4)%2===0) ? HUMANOID_B : HUMANOID_A;
+  ctx.save();
+  if(invulnTimer>0 && Math.floor(invulnTimer/100)%2===0) ctx.globalAlpha=0.4;
+  const pw=10*6, ph=14*6;
+  ctx.translate(player.x-cx-pw/2, player.y-cy-ph/2);
+  if(facing.x<0){ ctx.translate(pw,0); ctx.scale(-1,1); }
+  drawPixelGrid(ctx, grid, CLASS_PALETTES[player.class], 0,0,6);
+  ctx.restore();
+}
+
+/* ---------------- HUD ---------------- */
+function updateHUD(){
+  document.getElementById('hudName').textContent = player.name;
+  document.getElementById('hudLevel').textContent = "Lvl " + player.level + " · " + CLASS_DATA[player.class].label;
+  document.getElementById('hpText').textContent = Math.max(0,Math.ceil(player.hp)) + "/" + player.maxHp;
+  document.getElementById('hpBar').style.width = Math.max(0,(player.hp/player.maxHp*100)) + "%";
+  document.getElementById('manaText').textContent = Math.floor(player.mana) + "/" + player.maxMana;
+  document.getElementById('manaBar').style.width = (player.mana/player.maxMana*100) + "%";
+  const need = xpToNext(player.level);
+  document.getElementById('xpText').textContent = player.xp + "/" + need;
+  document.getElementById('xpBar').style.width = (player.xp/need*100) + "%";
+  document.getElementById('goldText').textContent = player.gold;
+}
+
+/* ---------------- INVENTORY UI ---------------- */
+function toggleInventory(){
+  const ov = document.getElementById('inv-overlay');
+  if(ov.classList.contains('hidden')){ renderInventory(); ov.classList.remove('hidden'); }
+  else ov.classList.add('hidden');
+}
+document.getElementById('btnInventory').onclick = toggleInventory;
+document.getElementById('invClose').onclick = toggleInventory;
+document.getElementById('btnSaveNow').onclick = ()=>{ saveGame(); showToast("Gespeichert."); };
+document.getElementById('btnLogout').onclick = ()=>{ saveGame(); location.reload(); };
+
+function slotLabel(item){
+  if(!item) return "leer";
+  return item.name + " (+"+ (item.atk||item.def||item.mana||0) +")";
+}
+function renderInventory(){
+  const eq = player.equipment;
+  const mainSlot = document.getElementById('slot-main');
+  const offSlot = document.getElementById('slot-offhand');
+  const armSlot = document.getElementById('slot-armor');
+  mainSlot.querySelector('.slotcontent').textContent = slotLabel(eq.main);
+  mainSlot.style.boxShadow = eq.main? "0 0 0 2px "+eq.main.rarityColor : "";
+  offSlot.querySelector('.slotcontent').textContent = slotLabel(eq.offhand);
+  offSlot.style.boxShadow = eq.offhand? "0 0 0 2px "+eq.offhand.rarityColor : "";
+  armSlot.querySelector('.slotcontent').textContent = slotLabel(eq.armor);
+  armSlot.style.boxShadow = eq.armor? "0 0 0 2px "+eq.armor.rarityColor : "";
+
+  mainSlot.onclick = ()=>{ if(eq.main){ player.inventory.push(eq.main); eq.main=null; renderInventory(); } };
+  offSlot.onclick = ()=>{ if(eq.offhand){ player.inventory.push(eq.offhand); eq.offhand=null; renderInventory(); } };
+  armSlot.onclick = ()=>{ if(eq.armor){ player.inventory.push(eq.armor); eq.armor=null; renderInventory(); } };
+
+  const grid = document.getElementById('inv-grid');
+  grid.innerHTML="";
+  player.inventory.forEach((item, idx)=>{
+    const cell = document.createElement('div');
+    cell.className='item-cell rarity-'+item.rarity;
+    cell.innerHTML = `<div>${item.name}</div><div style="color:${item.rarityColor}; font-size:10px;">${item.rarity}</div><div style="font-size:11px;">${item.atk?('ATK+'+item.atk):''}${item.def?('DEF+'+item.def):''}${item.mana?('MANA+'+item.mana):''}</div>`;
+    cell.onclick = ()=>{ equipItem(idx); };
+    grid.appendChild(cell);
+  });
+}
+function equipItem(idx){
+  const item = player.inventory[idx];
+  if(!item.classes.includes(player.class)){ showToast("Diese Klasse kann das nicht tragen."); return; }
+  player.inventory.splice(idx,1);
+  if(item.type==='weapon'){
+    if(item.hands===2){
+      if(player.equipment.main) player.inventory.push(player.equipment.main);
+      if(player.equipment.offhand) player.inventory.push(player.equipment.offhand);
+      player.equipment.offhand=null;
+      player.equipment.main=item;
+    } else {
+      if(item.slot==='offhand'){
+        if(player.equipment.offhand) player.inventory.push(player.equipment.offhand);
+        // wenn aktuell 2H Waffe getragen wird, geht das nicht gleichzeitig
+        if(player.equipment.main && player.equipment.main.hands===2){ player.inventory.push(item); showToast("Erst Zweihandwaffe ablegen."); renderInventory(); return; }
+        player.equipment.offhand=item;
+      } else {
+        if(player.equipment.main) player.inventory.push(player.equipment.main);
+        player.equipment.main=item;
+        if(player.equipment.offhand){ player.inventory.push(player.equipment.offhand); player.equipment.offhand=null; }
+      }
+    }
+  } else if(item.type==='armor'){
+    if(player.equipment.armor) player.inventory.push(player.equipment.armor);
+    player.equipment.armor=item;
+  }
+  renderInventory();
+  saveGame();
+}
+</script>
+</body>
+</html>
